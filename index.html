@@ -82,12 +82,35 @@ button{cursor:pointer;border:0;background:none}
 .safe-t{color:var(--safe)} .edge-t{color:var(--edge)} .low-t{color:var(--low)} .empty-t{color:var(--muted)}
 .fill-safe{background:var(--safe) !important} .fill-edge{background:#E59A0C !important} .fill-low{background:var(--low) !important}
 .hero .fill-safe{background:#5BE0AE !important} .hero .fill-edge{background:#FFC24B !important} .hero .fill-low{background:#FF8A80 !important}
-.sub-actions{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:14px}
+.sub-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.sub-actions2{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:8px}
+.btn2{height:44px;border-radius:12px;font-weight:700;font-size:15px;padding:0 16px}
+.btn-can{background:#E8EAFB;color:var(--ink)}
+.sub-note{font-size:14px;color:var(--muted);margin-top:4px;line-height:1.4}
+.hero-sub{font-size:14px;color:#D6DAFF;margin-top:10px;line-height:1.45}
+.answer{border-radius:18px;padding:16px;margin-bottom:14px}
+.answer b{display:block;font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.answer p{font-size:16px;font-weight:600;margin-top:8px;line-height:1.4}
+.answer.safe{background:var(--safe-soft);color:#08704D}
+.answer.edge{background:var(--edge-soft);color:#8A5300}
+.answer.low{background:var(--low-soft);color:#A8241C}
+.answer.empty{background:var(--card);color:var(--muted)}
+.plan{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:10px}
+.plan h4{font-size:17px;font-weight:700;margin-bottom:4px}
+.plan .hint{font-size:14px;color:var(--muted);margin-bottom:10px}
+.step{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.step:first-of-type{border-top:0}
+.step span{font-size:16px;font-weight:600}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:44px;height:44px;border-radius:12px;background:var(--paper);font-size:22px;font-weight:700;color:var(--ink)}
+.stepper output{min-width:44px;text-align:center;font-size:22px;font-weight:800}
+.plan-result{margin-top:12px;border-radius:14px;padding:14px;font-size:17px;font-weight:700;line-height:1.35}
+.plan-result small{display:block;font-size:14px;font-weight:500;margin-top:2px;opacity:.85}
 .btn{height:52px;border-radius:14px;font-weight:700;font-size:17px;transition:transform .08s}
 .btn:active{transform:scale(.97)}
 .btn-att{background:var(--safe-soft);color:#08704D}
 .btn-bunk{background:var(--low-soft);color:#A8241C}
-.btn-edit{width:52px;background:var(--paper);color:var(--muted);font-size:15px;font-weight:600}
+.btn-edit{background:var(--paper);color:var(--muted)}
 .pulse{animation:pulse .35s ease}
 @keyframes pulse{50%{transform:scale(1.06)}}
 
@@ -166,6 +189,7 @@ button{cursor:pointer;border:0;background:none}
       <div class="meter-line" id="heroLine"><span id="heroLineLbl">75%</span></div>
     </div>
     <div class="hero-msg" id="heroMsg">Tap Attended or Bunked after each class.</div>
+    <p class="hero-sub hidden" id="heroSub"></p>
   </section>
 
   <div class="section-head">
@@ -208,7 +232,7 @@ function clean(s){
     if(!x) return;
     var t = toInt(x.t), a = toInt(x.a);
     if(a > t) a = t;
-    out.subjects.push({id: String(x.id || uid()), name: String(x.name || "Subject").slice(0,40), a:a, t:t});
+    out.subjects.push({id: String(x.id || uid()), name: String(x.name || "Subject").slice(0,40), a:a, t:t, p:toInt(x.p)});
   });
   return out;
 }
@@ -235,17 +259,44 @@ function fmtPct(p){
   return (f % 1 === 0) ? String(f) : f.toFixed(1);
 }
 function plural(n, w){ return n + " " + w + (n === 1 ? "" : "es"); }
-function message(r, target){
-  if(r.status === "empty") return "No classes yet. Tap Attended or Bunked after each class.";
-  if(r.status === "safe") return "You can bunk " + plural(r.can,"class") + " and still stay at " + target + "%.";
-  if(r.status === "edge") return "You're right on the line. Bunk the next class and you drop below " + target + "%.";
-  return "Attend the next " + plural(r.need,"class") + " in a row to reach " + target + "%.";
-}
-function shortMsg(r, target){
-  if(r.status === "empty") return "No classes logged yet";
-  if(r.status === "safe") return "You can bunk " + r.can + " more";
-  if(r.status === "edge") return "On the line. Don't bunk the next one";
-  return "Attend the next " + r.need + " to reach " + target + "%";
+function hasPlan(a, t, p){ return p > 0 && p > t; }
+/* Works out the status and the two lines of text shown for a subject (or overall).
+   p = total classes expected this semester (0 = not entered). */
+function analyze(a, t, p, tg){
+  var T = tg/100, r = calc(a, t, tg);
+  var out = {status:r.status, pct:r.pct, main:"", sub:""};
+  if(hasPlan(a, t, p)){
+    var R = p - t;
+    var req = Math.ceil(T*p - 1e-9);
+    var need = Math.max(0, req - a);
+    var left = plural(R, "class") + " left this semester.";
+    if(need > R){
+      out.status = "low";
+      out.main = left + " Even if you attend all " + R + ", you'll finish at " + fmtPct((a+R)/p*100) + "%.";
+      out.sub = "You can't reach " + tg + "% this semester. Attend every class from now and talk to your faculty about condonation.";
+    } else if(R - need >= 1){
+      out.status = "safe";
+      out.main = left + " You can bunk up to " + (R-need) + " of them and still finish with at least " + tg + "%.";
+      out.sub = need === 0 ? "Even if you bunk all of them, you'll finish at " + fmtPct(a/p*100) + "%." : "That means attending at least " + need + " of the " + R + ".";
+    } else {
+      out.status = "edge";
+      out.main = left + " You must attend all " + R + " to finish with " + tg + "%.";
+      out.sub = "Bunk even one and you'll finish below " + tg + "%.";
+    }
+    return out;
+  }
+  if(r.status === "empty"){ out.main = "No classes yet. Tap Attended or Bunked after each class."; return out; }
+  if(p > 0 && p === t){ out.main = "No classes left this semester. You finished at " + fmtPct(r.pct) + "%."; return out; }
+  if(r.status === "safe") out.main = "You can bunk the next " + plural(r.can,"class") + " and still have at least " + tg + "%.";
+  else if(r.status === "edge") out.main = "You're right on the line. Bunk the next class and you drop below " + tg + "%.";
+  else if(r.need === 1) out.main = "If the next class happens and you attend it, you'll reach " + tg + "%.";
+  else if(r.need <= 10) out.main = "If the next " + r.need + " classes happen and you attend all " + r.need + ", you'll reach " + tg + "%.";
+  else {
+    out.main = "If the next 10 classes happen and you attend all 10, you'll be at " + fmtPct((a+10)/(t+10)*100) + "%.";
+    out.sub = "To reach " + tg + "%, " + r.need + " more classes need to happen and you must attend all of them. Add your expected total in Edit to see your real chances.";
+  }
+  if(p > 0 && p < t) out.sub = "More classes have happened than you expected. Update the expected total in Edit.";
+  return out;
 }
 
 /* ---------- helpers ---------- */
@@ -253,7 +304,9 @@ function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 function buzz(){ try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){} }
 function totals(){
-  var a=0,t=0; state.subjects.forEach(function(s){ a+=s.a; t+=s.t; }); return {a:a,t:t};
+  var a=0,t=0,p=0,all=state.subjects.length>0;
+  state.subjects.forEach(function(s){ a+=s.a; t+=s.t; p+=s.p; if(!(s.p>0 && s.p>=s.t)) all=false; });
+  return {a:a,t:t,p: all ? p : 0};
 }
 
 /* ---------- onboarding ---------- */
@@ -285,7 +338,8 @@ function renderOb(){
       h += '<input class="inp" id="nm'+j+'" maxlength="40" placeholder="Subject '+(j+1)+'" value="'+esc(nm)+'" autocomplete="off">';
       if(ob.know){
         h += '<div class="nums"><div><label class="lbl" for="na'+j+'">Classes attended</label><input class="inp" id="na'+j+'" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="'+esc(n.a)+'"></div>';
-        h += '<div><label class="lbl" for="nt'+j+'">Total classes</label><input class="inp" id="nt'+j+'" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="'+esc(n.t)+'"></div></div>';
+        h += '<div><label class="lbl" for="nt'+j+'">Classes held so far</label><input class="inp" id="nt'+j+'" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="'+esc(n.t)+'"></div></div>';
+        h += '<div style="margin-top:8px"><label class="lbl" for="np'+j+'">Total expected this semester (optional)</label><input class="inp" id="np'+j+'" inputmode="numeric" pattern="[0-9]*" placeholder="Leave empty if you don\'t know" value="'+esc(n.p||"")+'"></div>';
       }
       h += '</div>';
     }
@@ -304,20 +358,22 @@ function renderOb(){
   window.scrollTo(0,0);
 }
 function readObStep2(){
-  var ok = true;
+  var ok = true, msg = "";
   ob.names = []; ob.nums = [];
   for(var j=0;j<ob.count;j++){
     ob.names[j] = $("nm"+j).value.trim();
     if(ob.know){
       var ai=$("na"+j), ti=$("nt"+j);
-      ob.nums[j] = {a: ai.value.trim(), t: ti.value.trim()};
-      var a=toInt(ai.value), t=toInt(ti.value);
-      var bad = a > t;
-      ai.classList.toggle("bad", bad); ti.classList.toggle("bad", bad);
-      if(bad) ok = false;
+      var pi=$("np"+j);
+      ob.nums[j] = {a: ai.value.trim(), t: ti.value.trim(), p: pi.value.trim()};
+      var a=toInt(ai.value), t=toInt(ti.value), pp=toInt(pi.value);
+      var bad = a > t, badP = pp > 0 && pp < t;
+      ai.classList.toggle("bad", bad); ti.classList.toggle("bad", bad); pi.classList.toggle("bad", badP);
+      if(bad){ ok = false; msg = "Classes attended can't be more than classes held so far."; }
+      if(badP){ ok = false; msg = msg || "Expected total can't be less than classes held so far."; }
     }
   }
-  $("obErr").textContent = ok ? "" : "Classes attended can't be more than total classes.";
+  $("obErr").textContent = ok ? "" : msg;
   return ok;
 }
 $("onboarding").addEventListener("click", function(e){
@@ -335,8 +391,9 @@ $("onboarding").addEventListener("click", function(e){
     state.target = ob.target;
     for(var j=0;j<ob.count;j++){
       var n = ob.know ? (ob.nums[j]||{}) : {};
-      var t = toInt(n.t), a = Math.min(toInt(n.a), t);
-      state.subjects.push({id:uid(), name: ob.names[j] || ("Subject " + (j+1)), a:a, t:t});
+      var t = toInt(n.t), a = Math.min(toInt(n.a), t), pp = toInt(n.p);
+      if(pp < t) pp = 0;
+      state.subjects.push({id:uid(), name: ob.names[j] || ("Subject " + (j+1)), a:a, t:t, p:pp});
     }
     state.ready = true; save();
     $("onboarding").classList.add("hidden");
@@ -348,14 +405,15 @@ function readObStep2Silent(){
   for(var j=0;j<ob.count;j++){
     var nm=$("nm"+j); if(nm) ob.names[j]=nm.value.trim();
     var ai=$("na"+j), ti=$("nt"+j);
-    if(ai && ti) ob.nums[j]={a:ai.value.trim(), t:ti.value.trim()};
+    var pi=$("np"+j);
+    if(ai && ti) ob.nums[j]={a:ai.value.trim(), t:ti.value.trim(), p: pi ? pi.value.trim() : ""};
   }
 }
 
 /* ---------- main render ---------- */
 function showApp(){ $("app").classList.remove("hidden"); render(); }
 function render(pulseId){
-  var tg = state.target, tt = totals(), r = calc(tt.a, tt.t, tg);
+  var tg = state.target, tt = totals(), r = analyze(tt.a, tt.t, tt.p, tg);
   $("heroNum").innerHTML = fmtPct(r.pct) + "<small>%</small>";
   $("heroCount").textContent = tt.a + " of " + tt.t + " classes attended";
   var fill = $("heroFill");
@@ -364,8 +422,10 @@ function render(pulseId){
   $("heroLine").style.left = tg + "%";
   $("heroLineLbl").textContent = tg + "%";
   var hm = $("heroMsg");
-  hm.textContent = message(r, tg);
+  hm.textContent = r.main;
   hm.className = "hero-msg" + (r.status==="empty" ? "" : " " + r.status);
+  var hs = $("heroSub");
+  hs.textContent = r.sub; hs.classList.toggle("hidden", !r.sub);
   if(pulseId){ $("heroNum").classList.remove("pulse"); void $("heroNum").offsetWidth; $("heroNum").classList.add("pulse"); }
 
   var h = "";
@@ -373,15 +433,17 @@ function render(pulseId){
     h = '<div class="sub"><div class="sub-name">No subjects yet</div><p class="sub-count" style="margin-top:6px">Add your first subject to start tracking.</p><button class="primary" data-act="add">Add subject</button></div>';
   }
   state.subjects.forEach(function(s){
-    var x = calc(s.a, s.t, tg), st = x.status;
+    var x = analyze(s.a, s.t, s.p, tg), st = x.status;
     h += '<article class="sub" data-id="'+s.id+'">';
-    h += '<div class="sub-top"><div><div class="sub-name">'+esc(s.name)+'</div><div class="sub-count">'+s.a+' of '+s.t+' attended</div></div>';
+    h += '<div class="sub-top"><div><div class="sub-name">'+esc(s.name)+'</div><div class="sub-count">'+s.a+' of '+s.t+' attended'+(s.p>0?', '+s.p+' expected':'')+'</div></div>';
     h += '<div class="sub-pct '+(st==="empty"?"empty-t":st+"-t")+(pulseId===s.id?" pulse":"")+'">'+fmtPct(x.pct)+'<small>%</small></div></div>';
     h += '<div class="meter" aria-hidden="true"><div class="meter-fill'+(st==="empty"?"":" fill-"+st)+'" style="width:'+(x.pct===null?0:Math.min(100,x.pct))+'%"></div><div class="meter-line" style="left:'+tg+'%"></div></div>';
-    h += '<div class="sub-msg '+(st==="empty"?"empty-t":st+"-t")+'">'+esc(shortMsg(x,tg))+'</div>';
+    h += '<div class="sub-msg '+(st==="empty"?"empty-t":st+"-t")+'">'+esc(x.main)+'</div>';
+    if(x.sub) h += '<div class="sub-note">'+esc(x.sub)+'</div>';
     h += '<div class="sub-actions"><button class="btn btn-att" data-act="att" aria-label="Attended a '+esc(s.name)+' class">Attended</button>';
-    h += '<button class="btn btn-bunk" data-act="bunk" aria-label="Bunked a '+esc(s.name)+' class">Bunked</button>';
-    h += '<button class="btn btn-edit" data-act="edit" aria-label="Edit '+esc(s.name)+'">Edit</button></div>';
+    h += '<button class="btn btn-bunk" data-act="bunk" aria-label="Bunked a '+esc(s.name)+' class">Bunked</button></div>';
+    h += '<div class="sub-actions2"><button class="btn2 btn-can" data-act="can">Can I bunk?</button>';
+    h += '<button class="btn2 btn-edit" data-act="edit" aria-label="Edit '+esc(s.name)+'">Edit</button></div>';
     h += '</article>';
   });
   $("subjects").innerHTML = h;
@@ -400,6 +462,7 @@ $("subjects").addEventListener("click", function(e){
     toast(esc(s.name) + ": " + (b.dataset.act === "att" ? "marked attended" : "marked bunked"), true);
   }
   if(b.dataset.act === "edit") openEdit(s);
+  if(b.dataset.act === "can") openCan(s);
 });
 function find(id){ for(var i=0;i<state.subjects.length;i++) if(state.subjects[i].id===id) return state.subjects[i]; return null; }
 
@@ -430,8 +493,10 @@ function openEdit(s){
   var h = '<h3>'+(isNew ? "Add subject" : "Edit subject")+'</h3>';
   h += '<label class="field"><span class="lbl">Subject name</span><input class="inp" id="edName" maxlength="40" placeholder="For example, DBMS" value="'+(s?esc(s.name):"")+'" autocomplete="off"></label>';
   h += '<div class="nums"><label><span class="lbl">Classes attended</span><input class="inp" id="edA" inputmode="numeric" pattern="[0-9]*" value="'+(s?s.a:0)+'"></label>';
-  h += '<label><span class="lbl">Total classes</span><input class="inp" id="edT" inputmode="numeric" pattern="[0-9]*" value="'+(s?s.t:0)+'"></label></div>';
+  h += '<label><span class="lbl">Classes held so far</span><input class="inp" id="edT" inputmode="numeric" pattern="[0-9]*" value="'+(s?s.t:0)+'"></label></div>';
   h += '<p class="sub-count" style="margin-top:8px">When your college shares your real numbers, enter them here to correct the count.</p>';
+  h += '<label class="field" style="margin-top:14px"><span class="lbl">Total classes expected this semester (optional)</span><input class="inp" id="edP" inputmode="numeric" pattern="[0-9]*" placeholder="Leave empty if you don\'t know" value="'+(s&&s.p?s.p:"")+'"></label>';
+  h += '<p class="sub-count">Ask your faculty or check the course plan. With this, Bunk Meter tells you how many of the remaining classes you can bunk.</p>';
   h += '<div class="err" id="edErr"></div>';
   h += '<button class="primary" id="edSave">'+(isNew ? "Add subject" : "Save changes")+'</button>';
   if(!isNew) h += '<button class="danger-btn" id="edDel">Delete subject</button>';
@@ -441,10 +506,11 @@ function openEdit(s){
   $("edCancel").onclick = closeSheet;
   $("edSave").onclick = function(){
     var name = $("edName").value.trim() || (isNew ? "Subject " + (state.subjects.length+1) : s.name);
-    var a = toInt($("edA").value), t = toInt($("edT").value);
-    if(a > t){ $("edErr").textContent = "Classes attended can't be more than total classes."; return; }
-    if(isNew){ state.subjects.push({id:uid(), name:name, a:a, t:t}); }
-    else { undoStack.push({id:s.id, a:s.a, t:s.t}); s.name = name; s.a = a; s.t = t; }
+    var a = toInt($("edA").value), t = toInt($("edT").value), pp = toInt($("edP").value);
+    if(a > t){ $("edErr").textContent = "Classes attended can't be more than classes held so far."; return; }
+    if(pp && pp < t){ $("edErr").textContent = "Expected total can't be less than classes held so far (" + t + ")."; return; }
+    if(isNew){ state.subjects.push({id:uid(), name:name, a:a, t:t, p:pp}); }
+    else { undoStack.push({id:s.id, a:s.a, t:s.t}); s.name = name; s.a = a; s.t = t; s.p = pp; }
     save(); closeSheet(); render(); toast(isNew ? "Subject added" : "Changes saved", false);
   };
   if(!isNew) $("edDel").onclick = function(){
@@ -452,6 +518,53 @@ function openEdit(s){
     state.subjects = state.subjects.filter(function(x){ return x.id !== s.id; });
     save(); closeSheet(); render(); toast("Subject deleted", false);
   };
+}
+
+function openCan(s){
+  var tg = state.target, T = tg/100;
+  var x = analyze(s.a, s.t, s.p, tg);
+  var word, cls, text;
+  if(s.t === 0){
+    cls = "empty"; word = "Not yet";
+    text = "No classes logged for " + s.name + " yet. Tap Attended or Bunked after each class, or add your numbers in Edit.";
+  } else if(hasPlan(s.a, s.t, s.p)){
+    var R = s.p - s.t, need = Math.max(0, Math.ceil(T*s.p - 1e-9) - s.a), can = R - need;
+    if(need > R){ cls = "low"; word = "No"; text = "Even if you attend all " + R + " classes left, you'll finish at " + fmtPct((s.a+R)/s.p*100) + "%. Don't bunk. Attend every class and talk to your faculty about condonation."; }
+    else if(can >= 1){ cls = "safe"; word = "Yes"; text = "You can bunk up to " + can + " of the " + R + " classes left and still finish with at least " + tg + "%."; }
+    else { cls = "edge"; word = "No"; text = "You need to attend all " + R + " classes left to finish with " + tg + "%. Bunk one and you'll finish below."; }
+  } else {
+    var now = s.a/s.t, after = s.a/(s.t+1)*100;
+    if(now < T - 1e-12){ cls = "low"; word = "No"; text = "You're already below " + tg + "%. Bunking the next class takes you to " + fmtPct(after) + "%."; }
+    else if(after/100 >= T - 1e-12){ cls = "safe"; word = "Yes"; text = "If you bunk the next class, you'll be at " + fmtPct(after) + "%. Still safe."; }
+    else { cls = "edge"; word = "Risky"; text = "If you bunk the next class, you'll drop to " + fmtPct(after) + "%, just below " + tg + "%."; }
+  }
+  var plan = hasPlan(s.a, s.t, s.p);
+  var more = plan ? Math.min(s.p - s.t, 200) : 10, bunk = Math.min(1, more);
+  var h = '<h3>Can I bunk ' + esc(s.name) + '?</h3>';
+  h += '<div class="answer ' + cls + '"><b>' + word + '</b><p>' + esc(text) + '</p></div>';
+  h += '<div class="plan"><h4>Plan ahead</h4><p class="hint">' + (plan ? "Starts with the classes left this semester. Change the numbers to try your own plan." : "Try your own plan. Change the numbers and see where you'll be.") + '</p>';
+  h += '<div class="step"><span>If this many classes happen</span><div class="stepper"><button data-k="more" data-d="-1" aria-label="Fewer classes">-</button><output id="pmMore"></output><button data-k="more" data-d="1" aria-label="More classes">+</button></div></div>';
+  h += '<div class="step"><span>and I bunk</span><div class="stepper"><button data-k="bunk" data-d="-1" aria-label="Bunk fewer">-</button><output id="pmBunk"></output><button data-k="bunk" data-d="1" aria-label="Bunk more">+</button></div></div>';
+  h += '<div class="plan-result" id="pmRes" aria-live="polite"></div></div>';
+  h += '<button class="primary" id="canDone">Done</button>';
+  openSheet(h);
+  function upd(){
+    $("pmMore").textContent = more; $("pmBunk").textContent = bunk;
+    var na = s.a + more - bunk, nt = s.t + more, pc = na/nt*100;
+    var st = na/nt < T - 1e-12 ? "low" : (na/(nt+1) >= T - 1e-12 ? "safe" : "edge");
+    var el = $("pmRes");
+    el.className = "plan-result answer " + st;
+    el.innerHTML = "You'll be at " + fmtPct(pc) + "%" + "<small>" + na + " of " + nt + " attended. " + (st === "low" ? "Below " + tg + "%." : st === "edge" ? "Just at the line." : "Safe, above " + tg + "%.") + "</small>";
+  }
+  $("sheetRoot").querySelector(".plan").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-k]"); if(!b) return;
+    var d = +b.dataset.d;
+    if(b.dataset.k === "more"){ more = Math.max(1, Math.min(500, more + d)); if(bunk > more) bunk = more; }
+    else { bunk = Math.max(0, Math.min(more, bunk + d)); }
+    upd();
+  });
+  $("canDone").onclick = closeSheet;
+  upd();
 }
 
 function openSettings(){

@@ -18,10 +18,12 @@ Built by [Vikas Senior](https://instagram.com/vikas_senior) with Claude, as Day 
 
 1. **Pick how many subjects you have.** Labs count too, if your college takes attendance for them.
 2. **Name your subjects** (optional). For example DBMS, OS, CN, OS Lab.
-3. **Already have attendance?** Turn on "I already know my attendance" and enter classes attended and total classes for each subject. Otherwise everything starts at zero.
+3. **Already have attendance?** Turn on "I already know my attendance" and enter classes attended and classes held so far for each subject. Otherwise everything starts at zero.
+   - **Know how many classes your semester will have?** Add the total expected this semester (optional). Bunk Meter then tells you how many of the remaining classes you can bunk, or whether 75% is still reachable.
 4. **Choose your college's rule.** 75% is the default. You can pick 65%, 70% or 80%.
 5. **After every class**, tap **Attended** or **Bunked** on that subject. Tapped the wrong one? Tap **Undo**.
-6. **When your college shares real numbers**, tap **Edit** on the subject and type them in. The count corrects itself.
+6. **Tap Can I bunk?** on any subject for a straight Yes, Risky or No, plus a planner: "if 10 more classes happen and I bunk 2, where will I be?"
+7. **When your college shares real numbers**, tap **Edit** on the subject and type them in. The count corrects itself.
 
 Tip: open Settings and tap **Add to home screen**. It then opens like an app and works without internet.
 
@@ -38,7 +40,8 @@ Your college's attendance records are final. Bunk Meter is a guide to help you p
 With `A` classes attended out of `T` total and a target of `P` (for example 0.75):
 
 - **Classes you can bunk** = the largest `x` where `A / (T + x)` is still at least `P`, which is `floor(A / P - T)`
-- **Classes you need to attend** = the smallest `y` where `(A + y) / (T + y)` reaches `P`, which is `ceil((P*T - A) / (1 - P))`
+- **Classes you need to attend** = the smallest `y` where `(A + y) / (T + y)` reaches `P`, which is `ceil((P*T - A) / (1 - P))`. Every class you attend also adds to the total, which is why this number grows fast.
+- **With an expected total `E`:** classes left `R = E - T`, classes you must attend `N = ceil(P*E) - A`. You can bunk `R - N` of them. If `N` is more than `R`, the target can't be reached this semester.
 
 Percentages are rounded down, never up, so 74.96% shows as 74.9%, not 75%.
 
