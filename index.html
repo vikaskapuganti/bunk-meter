@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bunk Meter - free attendance tracker for college students</title>
+<meta name="description" content="Track your attendance subject by subject and know exactly how many classes you can bunk and still stay above 75%. Free, no login, works offline.">
+<meta name="theme-color" content="#2430A6">
+<meta property="og:title" content="Bunk Meter">
+<meta property="og:description" content="Know how many classes you can bunk and still stay above 75%. Free, no login.">
+<meta property="og:image" content="icons/icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#2430A6;
+  --ink-deep:#19217A;
+  --paper:#EEF1F8;
+  --card:#FFFFFF;
+  --text:#1A1D2E;
+  --muted:#5E6481;
+  --line:#DCE1EE;
+  --safe:#0E9F6E;
+  --safe-soft:#E3F6EE;
+  --edge:#C97A00;
+  --edge-soft:#FFF3DC;
+  --low:#D93A31;
+  --low-soft:#FDE8E6;
+  --redline:#FF5A4E;
+  --font:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--font);background:var(--paper);color:var(--text);font-size:16px;line-height:1.45;min-height:100vh;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid #8A93FF;outline-offset:2px;border-radius:8px}
+.wrap{max-width:520px;margin:0 auto;padding:0 16px calc(32px + env(safe-area-inset-bottom))}
+.hidden{display:none !important}
+
+/* top bar */
+.bar{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top)) 0 14px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em;color:var(--ink)}
+.brand img{width:30px;height:30px;border-radius:8px}
+.icon-btn{height:40px;padding:0 14px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-weight:600;font-size:15px;color:var(--ink)}
+
+/* hero meter */
+.hero{background:var(--ink);color:#fff;border-radius:28px;padding:22px 22px 20px;position:relative;overflow:hidden}
+.hero-label{font-size:15px;color:#C9CEFF;font-weight:500}
+.hero-num{font-size:88px;line-height:.95;font-weight:800;letter-spacing:-.05em;margin-top:6px;font-variation-settings:"opsz" 96;display:flex;align-items:baseline}
+.hero-num small{font-size:40px;font-weight:700;margin-left:4px;letter-spacing:-.02em;color:#C9CEFF}
+.hero-count{font-size:15px;color:#C9CEFF;margin-top:6px}
+.meter{position:relative;height:18px;border-radius:99px;background:rgba(255,255,255,.16);margin:22px 0 10px}
+.meter-fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:#fff;transition:width .5s cubic-bezier(.2,.8,.2,1),background-color .3s}
+.meter-line{position:absolute;top:-8px;bottom:-8px;width:4px;margin-left:-2px;border-radius:4px;background:var(--redline)}
+.meter-line span{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;color:#FFB3AD;white-space:nowrap}
+.hero-msg{margin-top:16px;font-size:18px;font-weight:600;line-height:1.3;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.1)}
+.hero-msg.safe{background:#17B07A;color:#fff}
+.hero-msg.edge{background:#FFC24B;color:#3A2600}
+.hero-msg.low{background:var(--redline);color:#fff}
+
+/* subjects */
+.section-head{display:flex;justify-content:space-between;align-items:baseline;margin:28px 2px 12px}
+.section-head h2{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.section-head button{color:var(--ink);font-weight:600;font-size:15px;padding:6px 2px}
+.subjects{display:grid;gap:12px}
+.sub{background:var(--card);border-radius:20px;padding:16px;border:1px solid var(--line)}
+.sub-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.sub-name{font-size:18px;font-weight:700;letter-spacing:-.01em;word-break:break-word}
+.sub-count{font-size:14px;color:var(--muted);margin-top:2px}
+.sub-pct{font-size:34px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.sub-pct small{font-size:18px;font-weight:700}
+.sub .meter{height:10px;background:var(--paper);margin:16px 0 0}
+.sub .meter-line{top:-5px;bottom:-5px;width:3px;margin-left:-1.5px}
+.sub-msg{font-size:15px;font-weight:600;margin-top:12px}
+.safe-t{color:var(--safe)} .edge-t{color:var(--edge)} .low-t{color:var(--low)} .empty-t{color:var(--muted)}
+.fill-safe{background:var(--safe) !important} .fill-edge{background:#E59A0C !important} .fill-low{background:var(--low) !important}
+.hero .fill-safe{background:#5BE0AE !important} .hero .fill-edge{background:#FFC24B !important} .hero .fill-low{background:#FF8A80 !important}
+.sub-actions{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:14px}
+.btn{height:52px;border-radius:14px;font-weight:700;font-size:17px;transition:transform .08s}
+.btn:active{transform:scale(.97)}
+.btn-att{background:var(--safe-soft);color:#08704D}
+.btn-bunk{background:var(--low-soft);color:#A8241C}
+.btn-edit{width:52px;background:var(--paper);color:var(--muted);font-size:15px;font-weight:600}
+.pulse{animation:pulse .35s ease}
+@keyframes pulse{50%{transform:scale(1.06)}}
+
+.note{font-size:14px;color:var(--muted);text-align:center;margin:28px 8px 0;line-height:1.5}
+.credit{text-align:center;margin-top:14px;font-size:14px;color:var(--muted)}
+.credit a{color:var(--ink);font-weight:700;text-decoration:none}
+.credit a:hover{text-decoration:underline}
+
+/* onboarding */
+.ob{padding-top:calc(28px + env(safe-area-inset-top))}
+.ob-step{font-size:15px;color:var(--muted);font-weight:600}
+.ob h1{font-size:38px;line-height:1.05;letter-spacing:-.035em;font-weight:800;margin:10px 0 10px;color:var(--ink)}
+.ob p.lead{color:var(--muted);font-size:17px;max-width:40ch}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:26px 0}
+.chip{height:64px;border-radius:16px;background:var(--card);border:2px solid var(--line);font-size:24px;font-weight:800}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.field{display:block;margin-bottom:10px}
+.field-row{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px}
+.lbl{display:block;font-size:14px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.inp{width:100%;height:50px;border-radius:12px;border:2px solid var(--line);background:#fff;padding:0 14px;font-size:17px;font-weight:600}
+.inp:focus{border-color:var(--ink);outline:none}
+.inp.bad{border-color:var(--low)}
+.nums{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.toggle{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:18px 0 12px;width:100%;text-align:left}
+.toggle .box{width:26px;height:26px;border-radius:8px;border:2px solid var(--line);flex:none;display:grid;place-items:center;font-size:16px;font-weight:800;color:#fff}
+.toggle[aria-pressed="true"] .box{background:var(--ink);border-color:var(--ink)}
+.toggle b{display:block;font-size:16px}
+.toggle span.s{font-size:14px;color:var(--muted)}
+.primary{width:100%;height:58px;border-radius:16px;background:var(--ink);color:#fff;font-size:18px;font-weight:700;margin-top:18px}
+.primary:active{background:var(--ink-deep)}
+.ghost{width:100%;height:50px;border-radius:14px;color:var(--ink);font-weight:600;margin-top:6px}
+.err{color:var(--low);font-size:14px;font-weight:600;margin-top:6px;min-height:1em}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(16,20,60,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--paper);width:100%;max-width:520px;border-radius:26px 26px 0 0;padding:10px 18px calc(24px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto;animation:up .25s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{transform:translateY(40px);opacity:.4}}
+.grab{width:44px;height:5px;border-radius:9px;background:#C3C9DC;margin:4px auto 14px}
+.sheet h3{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:14px}
+.group{background:var(--card);border-radius:18px;border:1px solid var(--line);margin-bottom:14px;overflow:hidden}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 16px;width:100%;text-align:left;font-size:16px;font-weight:600;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .sub-t{display:block;font-size:13px;font-weight:500;color:var(--muted)}
+.row.danger{color:var(--low)}
+.targets{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px 16px}
+.targets .chip{height:48px;font-size:18px}
+.danger-btn{width:100%;height:50px;border-radius:14px;background:var(--low-soft);color:#A8241C;font-weight:700;margin-top:10px}
+.helptext{font-size:14px;color:var(--muted);padding:0 16px 14px;line-height:1.5}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:#fff;border-radius:16px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:14px;font-weight:600;font-size:15px;z-index:30;width:calc(100% - 32px);max-width:488px;justify-content:space-between;box-shadow:0 10px 30px rgba(16,20,60,.3)}
+.toast button{background:rgba(255,255,255,.14);color:#fff;font-weight:700;padding:9px 14px;border-radius:10px}
+
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+@media (min-width:600px){.hero-num{font-size:104px}}
+</style>
+</head>
+<body>
+
+<!-- Onboarding -->
+<main id="onboarding" class="wrap ob hidden" aria-live="polite"></main>
+
+<!-- App -->
+<div id="app" class="wrap hidden">
+  <header class="bar">
+    <div class="brand"><img src="icons/icon-192.png" alt="">Bunk Meter</div>
+    <button class="icon-btn" id="openSettings">Settings</button>
+  </header>
+
+  <section class="hero" aria-label="Overall attendance">
+    <div class="hero-label">Overall attendance</div>
+    <div class="hero-num" id="heroNum">0<small>%</small></div>
+    <div class="hero-count" id="heroCount">0 of 0 classes attended</div>
+    <div class="meter" aria-hidden="true">
+      <div class="meter-fill" id="heroFill" style="width:0%"></div>
+      <div class="meter-line" id="heroLine"><span id="heroLineLbl">75%</span></div>
+    </div>
+    <div class="hero-msg" id="heroMsg">Tap Attended or Bunked after each class.</div>
+  </section>
+
+  <div class="section-head">
+    <h2>Subjects</h2>
+    <button id="addSubject">Add subject</button>
+  </div>
+  <div class="subjects" id="subjects"></div>
+
+  <p class="note">This is a guide to plan your attendance. Your college's records are final.</p>
+  <p class="credit">Built by <a href="https://instagram.com/vikas_senior" target="_blank" rel="noopener">Vikas Senior</a> with Claude, for every student.<br>
+  <a href="https://instagram.com/edumoon_global" target="_blank" rel="noopener">EduMoon</a> &nbsp;&nbsp; <a href="https://github.com/vikaskapuganti/bunk-meter" target="_blank" rel="noopener">Open source on GitHub</a></p>
+</div>
+
+<div id="sheetRoot"></div>
+<div id="toastRoot" aria-live="polite"></div>
+<input type="file" id="restoreFile" accept="application/json,.json" class="hidden">
+
+<script>
+(function(){
+"use strict";
+var KEY = "bunkmeter-v1";
+var state = load();
+var undoStack = [];
+var toastTimer = null;
+
+/* ---------- storage ---------- */
+function blank(){ return {v:1, target:75, ready:false, subjects:[]}; }
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(!raw) return blank();
+    var s = JSON.parse(raw);
+    return clean(s) || blank();
+  }catch(e){ return blank(); }
+}
+function clean(s){
+  if(!s || !Array.isArray(s.subjects)) return null;
+  var out = {v:1, target:clampTarget(s.target), ready:!!s.ready, subjects:[]};
+  s.subjects.forEach(function(x){
+    if(!x) return;
+    var t = toInt(x.t), a = toInt(x.a);
+    if(a > t) a = t;
+    out.subjects.push({id: String(x.id || uid()), name: String(x.name || "Subject").slice(0,40), a:a, t:t});
+  });
+  return out;
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function toInt(v){ v = parseInt(v,10); return isFinite(v) && v > 0 ? Math.min(v, 9999) : 0; }
+function clampTarget(v){ v = parseInt(v,10); if(!isFinite(v)) return 75; return Math.max(50, Math.min(95, v)); }
+
+/* ---------- maths ---------- */
+function calc(a, t, target){
+  var T = target/100;
+  if(t === 0) return {status:"empty", pct:null};
+  var pct = a/t*100;
+  if(a/t >= T - 1e-12){
+    var can = Math.floor(a/T - t + 1e-9);
+    return {status: can >= 1 ? "safe" : "edge", pct:pct, can:can};
+  }
+  var need = Math.ceil((T*t - a)/(1-T) - 1e-9);
+  return {status:"low", pct:pct, need:need};
+}
+function fmtPct(p){
+  if(p === null) return "0";
+  var f = Math.floor(p*10)/10; // never round up past the line
+  return (f % 1 === 0) ? String(f) : f.toFixed(1);
+}
+function plural(n, w){ return n + " " + w + (n === 1 ? "" : "es"); }
+function message(r, target){
+  if(r.status === "empty") return "No classes yet. Tap Attended or Bunked after each class.";
+  if(r.status === "safe") return "You can bunk " + plural(r.can,"class") + " and still stay at " + target + "%.";
+  if(r.status === "edge") return "You're right on the line. Bunk the next class and you drop below " + target + "%.";
+  return "Attend the next " + plural(r.need,"class") + " in a row to reach " + target + "%.";
+}
+function shortMsg(r, target){
+  if(r.status === "empty") return "No classes logged yet";
+  if(r.status === "safe") return "You can bunk " + r.can + " more";
+  if(r.status === "edge") return "On the line. Don't bunk the next one";
+  return "Attend the next " + r.need + " to reach " + target + "%";
+}
+
+/* ---------- helpers ---------- */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function buzz(){ try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){} }
+function totals(){
+  var a=0,t=0; state.subjects.forEach(function(s){ a+=s.a; t+=s.t; }); return {a:a,t:t};
+}
+
+/* ---------- onboarding ---------- */
+var ob = {step:1, count:5, names:[], know:false, nums:[]};
+function startOnboarding(){
+  ob = {step:1, count:5, names:[], know:false, nums:[], target:75};
+  $("app").classList.add("hidden");
+  $("onboarding").classList.remove("hidden");
+  renderOb();
+}
+function renderOb(){
+  var el = $("onboarding"), h = "";
+  if(ob.step === 1){
+    h += '<div class="ob-step">Step 1 of 3</div>';
+    h += '<h1>How many subjects do you have this semester?</h1>';
+    h += '<p class="lead">Count labs too, if your college takes attendance for them.</p>';
+    h += '<div class="chips" role="group" aria-label="Number of subjects">';
+    for(var i=3;i<=10;i++) h += '<button class="chip" data-count="'+i+'" aria-pressed="'+(ob.count===i)+'">'+i+'</button>';
+    h += '</div><button class="primary" id="obNext">Continue</button>';
+  }
+  if(ob.step === 2){
+    h += '<div class="ob-step">Step 2 of 3</div>';
+    h += '<h1>Name your subjects</h1>';
+    h += '<p class="lead">Use short names like DBMS or OS Lab. You can leave them as they are and rename later.</p>';
+    h += '<button class="toggle" id="obKnow" aria-pressed="'+ob.know+'"><span class="box">'+(ob.know?'&#10003;':'')+'</span><span><b>I already know my attendance</b><span class="s">Enter the numbers your college shows. Skip this to start from zero.</span></span></button>';
+    for(var j=0;j<ob.count;j++){
+      var nm = ob.names[j] || "", n = ob.nums[j] || {a:"",t:""};
+      h += '<div class="field-row"><label class="lbl" for="nm'+j+'">Subject '+(j+1)+'</label>';
+      h += '<input class="inp" id="nm'+j+'" maxlength="40" placeholder="Subject '+(j+1)+'" value="'+esc(nm)+'" autocomplete="off">';
+      if(ob.know){
+        h += '<div class="nums"><div><label class="lbl" for="na'+j+'">Classes attended</label><input class="inp" id="na'+j+'" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="'+esc(n.a)+'"></div>';
+        h += '<div><label class="lbl" for="nt'+j+'">Total classes</label><input class="inp" id="nt'+j+'" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="'+esc(n.t)+'"></div></div>';
+      }
+      h += '</div>';
+    }
+    h += '<div class="err" id="obErr"></div>';
+    h += '<button class="primary" id="obNext">Continue</button><button class="ghost" id="obBack">Back</button>';
+  }
+  if(ob.step === 3){
+    h += '<div class="ob-step">Step 3 of 3</div>';
+    h += '<h1>How much attendance does your college need?</h1>';
+    h += '<p class="lead">Most colleges need 75% for the hall ticket. Change it if yours is different.</p>';
+    h += '<div class="chips" role="group" aria-label="Required attendance">';
+    [65,70,75,80].forEach(function(v){ h += '<button class="chip" data-target="'+v+'" aria-pressed="'+(ob.target===v)+'">'+v+'%</button>'; });
+    h += '</div><button class="primary" id="obDone">Start tracking</button><button class="ghost" id="obBack">Back</button>';
+  }
+  el.innerHTML = h;
+  window.scrollTo(0,0);
+}
+function readObStep2(){
+  var ok = true;
+  ob.names = []; ob.nums = [];
+  for(var j=0;j<ob.count;j++){
+    ob.names[j] = $("nm"+j).value.trim();
+    if(ob.know){
+      var ai=$("na"+j), ti=$("nt"+j);
+      ob.nums[j] = {a: ai.value.trim(), t: ti.value.trim()};
+      var a=toInt(ai.value), t=toInt(ti.value);
+      var bad = a > t;
+      ai.classList.toggle("bad", bad); ti.classList.toggle("bad", bad);
+      if(bad) ok = false;
+    }
+  }
+  $("obErr").textContent = ok ? "" : "Classes attended can't be more than total classes.";
+  return ok;
+}
+$("onboarding").addEventListener("click", function(e){
+  var b = e.target.closest("button"); if(!b) return;
+  if(b.dataset.count){ ob.count = +b.dataset.count; renderOb(); return; }
+  if(b.dataset.target){ ob.target = +b.dataset.target; renderOb(); return; }
+  if(b.id === "obKnow"){ readObStep2Silent(); ob.know = !ob.know; renderOb(); return; }
+  if(b.id === "obBack"){ if(ob.step===2) readObStep2Silent(); ob.step--; renderOb(); return; }
+  if(b.id === "obNext"){
+    if(ob.step === 2 && !readObStep2()) return;
+    ob.step++; renderOb(); return;
+  }
+  if(b.id === "obDone"){
+    state = blank();
+    state.target = ob.target;
+    for(var j=0;j<ob.count;j++){
+      var n = ob.know ? (ob.nums[j]||{}) : {};
+      var t = toInt(n.t), a = Math.min(toInt(n.a), t);
+      state.subjects.push({id:uid(), name: ob.names[j] || ("Subject " + (j+1)), a:a, t:t});
+    }
+    state.ready = true; save();
+    $("onboarding").classList.add("hidden");
+    showApp();
+  }
+});
+function readObStep2Silent(){
+  if(ob.step !== 2) return;
+  for(var j=0;j<ob.count;j++){
+    var nm=$("nm"+j); if(nm) ob.names[j]=nm.value.trim();
+    var ai=$("na"+j), ti=$("nt"+j);
+    if(ai && ti) ob.nums[j]={a:ai.value.trim(), t:ti.value.trim()};
+  }
+}
+
+/* ---------- main render ---------- */
+function showApp(){ $("app").classList.remove("hidden"); render(); }
+function render(pulseId){
+  var tg = state.target, tt = totals(), r = calc(tt.a, tt.t, tg);
+  $("heroNum").innerHTML = fmtPct(r.pct) + "<small>%</small>";
+  $("heroCount").textContent = tt.a + " of " + tt.t + " classes attended";
+  var fill = $("heroFill");
+  fill.style.width = (r.pct === null ? 0 : Math.min(100, r.pct)) + "%";
+  fill.className = "meter-fill" + (r.status==="empty" ? "" : " fill-" + r.status);
+  $("heroLine").style.left = tg + "%";
+  $("heroLineLbl").textContent = tg + "%";
+  var hm = $("heroMsg");
+  hm.textContent = message(r, tg);
+  hm.className = "hero-msg" + (r.status==="empty" ? "" : " " + r.status);
+  if(pulseId){ $("heroNum").classList.remove("pulse"); void $("heroNum").offsetWidth; $("heroNum").classList.add("pulse"); }
+
+  var h = "";
+  if(state.subjects.length === 0){
+    h = '<div class="sub"><div class="sub-name">No subjects yet</div><p class="sub-count" style="margin-top:6px">Add your first subject to start tracking.</p><button class="primary" data-act="add">Add subject</button></div>';
+  }
+  state.subjects.forEach(function(s){
+    var x = calc(s.a, s.t, tg), st = x.status;
+    h += '<article class="sub" data-id="'+s.id+'">';
+    h += '<div class="sub-top"><div><div class="sub-name">'+esc(s.name)+'</div><div class="sub-count">'+s.a+' of '+s.t+' attended</div></div>';
+    h += '<div class="sub-pct '+(st==="empty"?"empty-t":st+"-t")+(pulseId===s.id?" pulse":"")+'">'+fmtPct(x.pct)+'<small>%</small></div></div>';
+    h += '<div class="meter" aria-hidden="true"><div class="meter-fill'+(st==="empty"?"":" fill-"+st)+'" style="width:'+(x.pct===null?0:Math.min(100,x.pct))+'%"></div><div class="meter-line" style="left:'+tg+'%"></div></div>';
+    h += '<div class="sub-msg '+(st==="empty"?"empty-t":st+"-t")+'">'+esc(shortMsg(x,tg))+'</div>';
+    h += '<div class="sub-actions"><button class="btn btn-att" data-act="att" aria-label="Attended a '+esc(s.name)+' class">Attended</button>';
+    h += '<button class="btn btn-bunk" data-act="bunk" aria-label="Bunked a '+esc(s.name)+' class">Bunked</button>';
+    h += '<button class="btn btn-edit" data-act="edit" aria-label="Edit '+esc(s.name)+'">Edit</button></div>';
+    h += '</article>';
+  });
+  $("subjects").innerHTML = h;
+}
+
+$("subjects").addEventListener("click", function(e){
+  var b = e.target.closest("button"); if(!b) return;
+  if(b.dataset.act === "add"){ openEdit(null); return; }
+  var card = b.closest(".sub"); if(!card) return;
+  var s = find(card.dataset.id); if(!s) return;
+  if(b.dataset.act === "att" || b.dataset.act === "bunk"){
+    undoStack.push({id:s.id, a:s.a, t:s.t});
+    if(undoStack.length > 30) undoStack.shift();
+    s.t++; if(b.dataset.act === "att") s.a++;
+    save(); buzz(); render(s.id);
+    toast(esc(s.name) + ": " + (b.dataset.act === "att" ? "marked attended" : "marked bunked"), true);
+  }
+  if(b.dataset.act === "edit") openEdit(s);
+});
+function find(id){ for(var i=0;i<state.subjects.length;i++) if(state.subjects[i].id===id) return state.subjects[i]; return null; }
+
+/* ---------- toast ---------- */
+function toast(html, withUndo){
+  clearTimeout(toastTimer);
+  $("toastRoot").innerHTML = '<div class="toast" role="status"><span>'+html+'</span>'+(withUndo?'<button id="undoBtn">Undo</button>':'')+'</div>';
+  var u = $("undoBtn");
+  if(u) u.onclick = function(){
+    var last = undoStack.pop();
+    if(last){ var s = find(last.id); if(s){ s.a = last.a; s.t = last.t; save(); render(); } }
+    toast("Undone", false);
+  };
+  toastTimer = setTimeout(function(){ $("toastRoot").innerHTML = ""; }, withUndo ? 5000 : 2200);
+}
+
+/* ---------- sheets ---------- */
+function openSheet(html){
+  $("sheetRoot").innerHTML = '<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>'+html+'</div></div>';
+  $("scrim").addEventListener("click", function(e){ if(e.target.id === "scrim") closeSheet(); });
+  var first = $("sheetRoot").querySelector("input,button"); if(first) first.focus({preventScroll:true});
+}
+function closeSheet(){ $("sheetRoot").innerHTML = ""; }
+document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeSheet(); });
+
+function openEdit(s){
+  var isNew = !s;
+  var h = '<h3>'+(isNew ? "Add subject" : "Edit subject")+'</h3>';
+  h += '<label class="field"><span class="lbl">Subject name</span><input class="inp" id="edName" maxlength="40" placeholder="For example, DBMS" value="'+(s?esc(s.name):"")+'" autocomplete="off"></label>';
+  h += '<div class="nums"><label><span class="lbl">Classes attended</span><input class="inp" id="edA" inputmode="numeric" pattern="[0-9]*" value="'+(s?s.a:0)+'"></label>';
+  h += '<label><span class="lbl">Total classes</span><input class="inp" id="edT" inputmode="numeric" pattern="[0-9]*" value="'+(s?s.t:0)+'"></label></div>';
+  h += '<p class="sub-count" style="margin-top:8px">When your college shares your real numbers, enter them here to correct the count.</p>';
+  h += '<div class="err" id="edErr"></div>';
+  h += '<button class="primary" id="edSave">'+(isNew ? "Add subject" : "Save changes")+'</button>';
+  if(!isNew) h += '<button class="danger-btn" id="edDel">Delete subject</button>';
+  h += '<button class="ghost" id="edCancel">Cancel</button>';
+  openSheet(h);
+  var delArmed = false;
+  $("edCancel").onclick = closeSheet;
+  $("edSave").onclick = function(){
+    var name = $("edName").value.trim() || (isNew ? "Subject " + (state.subjects.length+1) : s.name);
+    var a = toInt($("edA").value), t = toInt($("edT").value);
+    if(a > t){ $("edErr").textContent = "Classes attended can't be more than total classes."; return; }
+    if(isNew){ state.subjects.push({id:uid(), name:name, a:a, t:t}); }
+    else { undoStack.push({id:s.id, a:s.a, t:s.t}); s.name = name; s.a = a; s.t = t; }
+    save(); closeSheet(); render(); toast(isNew ? "Subject added" : "Changes saved", false);
+  };
+  if(!isNew) $("edDel").onclick = function(){
+    if(!delArmed){ delArmed = true; this.textContent = "Tap again to delete " + s.name; return; }
+    state.subjects = state.subjects.filter(function(x){ return x.id !== s.id; });
+    save(); closeSheet(); render(); toast("Subject deleted", false);
+  };
+}
+
+function openSettings(){
+  var tg = state.target;
+  var h = '<h3>Settings</h3>';
+  h += '<div class="group"><div class="row" style="border:0;padding-bottom:4px"><span>Required attendance<span class="sub-t">What your college needs for the hall ticket</span></span></div>';
+  h += '<div class="targets">';
+  [65,70,75,80].forEach(function(v){ h += '<button class="chip" data-target="'+v+'" aria-pressed="'+(tg===v)+'">'+v+'%</button>'; });
+  h += '</div></div>';
+  h += '<div class="group">';
+  h += '<button class="row" id="stShare"><span>Share with friends<span class="sub-t">Send Bunk Meter to your class group</span></span></button>';
+  h += '<button class="row" id="stInstall"><span>Add to home screen<span class="sub-t">Open it like an app, even offline</span></span></button>';
+  h += '</div>';
+  h += '<div class="group">';
+  h += '<button class="row" id="stBackup"><span>Back up my data<span class="sub-t">Downloads a small file. Keep it safe.</span></span></button>';
+  h += '<button class="row" id="stRestore"><span>Restore from backup<span class="sub-t">Use a file you backed up earlier</span></span></button>';
+  h += '</div>';
+  h += '<p class="helptext">Your data is saved only on this phone. Clearing your browser data deletes it, so take a backup now and then.</p>';
+  h += '<div class="group">';
+  h += '<button class="row" id="stNewSem"><span>Start a new semester<span class="sub-t">Sets up fresh subjects and counts</span></span></button>';
+  h += '<button class="row danger" id="stWipe"><span>Delete all data<span class="sub-t">Removes everything from this phone</span></span></button>';
+  h += '</div>';
+  h += '<p class="credit">Bunk Meter is free and open source.<br>Built by <a href="https://instagram.com/vikas_senior" target="_blank" rel="noopener">Vikas Senior</a> with Claude.</p>';
+  h += '<button class="ghost" id="stClose">Done</button>';
+  openSheet(h);
+
+  $("sheetRoot").querySelector(".targets").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    state.target = clampTarget(b.dataset.target); save(); render();
+    this.querySelectorAll(".chip").forEach(function(c){ c.setAttribute("aria-pressed", String(+c.dataset.target === state.target)); });
+  });
+  $("stClose").onclick = closeSheet;
+  $("stShare").onclick = share;
+  $("stInstall").onclick = installHelp;
+  $("stBackup").onclick = backup;
+  $("stRestore").onclick = function(){ $("restoreFile").click(); };
+  var nsArmed = false, wpArmed = false;
+  $("stNewSem").onclick = function(){
+    if(!nsArmed){ nsArmed = true; this.querySelector(".sub-t").textContent = "Tap again to clear this semester. Back up first if you want to keep it."; return; }
+    localStorage.removeItem(KEY); state = blank(); undoStack = []; closeSheet(); startOnboarding();
+  };
+  $("stWipe").onclick = function(){
+    if(!wpArmed){ wpArmed = true; this.querySelector(".sub-t").textContent = "Tap again to delete everything"; return; }
+    localStorage.removeItem(KEY); state = blank(); undoStack = []; closeSheet(); startOnboarding();
+  };
+}
+$("openSettings").onclick = openSettings;
+$("addSubject").onclick = function(){ openEdit(null); };
+
+/* ---------- share / install / backup ---------- */
+function appUrl(){ return location.href.split("#")[0].split("?")[0]; }
+function share(){
+  var data = {title:"Bunk Meter", text:"Check how many classes you can bunk and still stay above 75%. Free, no login.", url: appUrl()};
+  if(navigator.share){ navigator.share(data).catch(function(){}); return; }
+  copy(data.text + " " + data.url);
+}
+function copy(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){ toast("Link copied. Paste it in your class group.", false); }, function(){ toast("Copy this link: " + esc(appUrl()), false); });
+  } else toast("Copy this link: " + esc(appUrl()), false);
+}
+var deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); deferredPrompt = e; });
+function installHelp(){
+  if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt = null; return; }
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var h = '<h3>Add to home screen</h3><div class="group"><p class="helptext" style="padding-top:14px">';
+  h += ios ? 'In Safari, tap the Share button at the bottom, then tap "Add to Home Screen".' : 'In Chrome, tap the three dots at the top right, then tap "Add to Home screen" or "Install app".';
+  h += '</p></div><button class="primary" id="ihOk">Got it</button>';
+  openSheet(h); $("ihOk").onclick = closeSheet;
+}
+function backup(){
+  var blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+  var a = document.createElement("a");
+  var d = new Date();
+  a.href = URL.createObjectURL(blob);
+  a.download = "bunk-meter-backup-" + d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0") + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  toast("Backup downloaded", false);
+}
+$("restoreFile").addEventListener("change", function(){
+  var f = this.files && this.files[0]; if(!f) return;
+  var rd = new FileReader();
+  rd.onload = function(){
+    try{
+      var s = clean(JSON.parse(rd.result));
+      if(!s) throw 0;
+      s.ready = true; state = s; save(); closeSheet();
+      $("onboarding").classList.add("hidden"); showApp(); toast("Backup restored", false);
+    }catch(e){ toast("That file isn't a Bunk Meter backup. Choose the file you downloaded from Back up my data.", false); }
+  };
+  rd.readAsText(f); this.value = "";
+});
+
+/* ---------- start ---------- */
+if(state.ready) showApp(); else startOnboarding();
+if("serviceWorker" in navigator && location.protocol === "https:"){
+  window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+}
+})();
+</script>
+</body>
+</html>
