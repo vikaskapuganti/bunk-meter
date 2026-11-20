@@ -116,6 +116,7 @@ button{cursor:pointer;border:0;background:none}
 
 .note{font-size:14px;color:var(--muted);text-align:center;margin:28px 8px 0;line-height:1.5}
 .credit{text-align:center;margin-top:14px;font-size:14px;color:var(--muted)}
+.tip{margin:24px 2px 0;padding:14px 16px;border-radius:16px;background:#E8EAFB;color:var(--ink);font-size:15px;line-height:1.45}
 .credit a{color:var(--ink);font-weight:700;text-decoration:none}
 .credit a:hover{text-decoration:underline}
 
@@ -198,9 +199,9 @@ button{cursor:pointer;border:0;background:none}
   </div>
   <div class="subjects" id="subjects"></div>
 
+  <p class="tip"><b>Tip:</b> take a screenshot of this page now and then. If your data is ever lost, you can enter your numbers again in a minute.</p>
   <p class="note">This is a guide to plan your attendance. Your college's records are final.</p>
-  <p class="credit">Built by <a href="https://instagram.com/vikas_senior" target="_blank" rel="noopener">Vikas Senior</a> with Claude, for every student.<br>
-  <a href="https://instagram.com/edumoon_global" target="_blank" rel="noopener">EduMoon</a> &nbsp;&nbsp; <a href="https://github.com/vikaskapuganti/bunk-meter" target="_blank" rel="noopener">Open source on GitHub</a></p>
+  <p class="credit">Built by <a href="https://instagram.com/vikas_senior" target="_blank" rel="noopener">Vikas Kapuganti</a></p>
 </div>
 
 <div id="sheetRoot"></div>
@@ -227,7 +228,7 @@ function load(){
 }
 function clean(s){
   if(!s || !Array.isArray(s.subjects)) return null;
-  var out = {v:1, target:clampTarget(s.target), ready:!!s.ready, subjects:[]};
+  var out = {v:1, target:clampTarget(s.target), ready:!!s.ready, tipShown:!!s.tipShown, subjects:[]};
   s.subjects.forEach(function(x){
     if(!x) return;
     var t = toInt(x.t), a = toInt(x.a);
@@ -398,6 +399,7 @@ $("onboarding").addEventListener("click", function(e){
     state.ready = true; save();
     $("onboarding").classList.add("hidden");
     showApp();
+    keepSafeTip();
   }
 });
 function readObStep2Silent(){
@@ -567,6 +569,21 @@ function openCan(s){
   upd();
 }
 
+function keepSafeTip(){
+  if(state.tipShown) return;
+  state.tipShown = true; save();
+  if(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return;
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var h = '<h3>Keep your data safe</h3><div class="group"><p class="helptext" style="padding-top:14px">';
+  h += 'Your attendance is saved only on this phone. Add Bunk Meter to your home screen so it opens like an app and your data stays put.</p><p class="helptext">';
+  h += ios ? 'In Safari, tap the Share button at the bottom, then tap "Add to Home Screen".' : 'In Chrome, tap the three dots at the top right, then tap "Add to Home screen" or "Install app".';
+  h += '</p><p class="helptext">Also take a screenshot of your numbers now and then, just in case.</p></div>';
+  h += (deferredPrompt ? '<button class="primary" id="ksInstall">Add to home screen</button><button class="ghost" id="ksOk">Later</button>' : '<button class="primary" id="ksOk">Got it</button>');
+  openSheet(h);
+  $("ksOk").onclick = closeSheet;
+  var ib = $("ksInstall");
+  if(ib) ib.onclick = function(){ closeSheet(); if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt = null; } };
+}
 function openSettings(){
   var tg = state.target;
   var h = '<h3>Settings</h3>';
@@ -587,7 +604,7 @@ function openSettings(){
   h += '<button class="row" id="stNewSem"><span>Start a new semester<span class="sub-t">Sets up fresh subjects and counts</span></span></button>';
   h += '<button class="row danger" id="stWipe"><span>Delete all data<span class="sub-t">Removes everything from this phone</span></span></button>';
   h += '</div>';
-  h += '<p class="credit">Bunk Meter is free and open source.<br>Built by <a href="https://instagram.com/vikas_senior" target="_blank" rel="noopener">Vikas Senior</a> with Claude.</p>';
+  h += '<p class="credit">Bunk Meter is free.<br>Built by <a href="https://instagram.com/vikas_senior" target="_blank" rel="noopener">Vikas Kapuganti</a></p>';
   h += '<button class="ghost" id="stClose">Done</button>';
   openSheet(h);
 
@@ -662,6 +679,7 @@ $("restoreFile").addEventListener("change", function(){
 
 /* ---------- start ---------- */
 if(state.ready) showApp(); else startOnboarding();
+try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){}); }catch(e){}
 if("serviceWorker" in navigator && location.protocol === "https:"){
   window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
 }

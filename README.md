@@ -10,7 +10,7 @@ Bunk Meter is a free attendance tracker for college students. Add your subjects,
 
 **Use it here:** https://vikaskapuganti.github.io/bunk-meter/
 
-Built by [Vikas Senior](https://instagram.com/vikas_senior) with Claude, as Day 1 of the *15 Problems. 15 AI Solutions.* challenge. Supported by [EduMoon](https://instagram.com/edumoon_global).
+Built by [Vikas Kapuganti](https://instagram.com/vikas_senior), as Day 1 of the *15 Problems. 15 AI Solutions.* challenge.
 
 ---
 
@@ -31,7 +31,7 @@ Tip: open Settings and tap **Add to home screen**. It then opens like an app and
 
 - No login, no account, no ads.
 - Your data is saved only on your own phone, in your browser. Nothing is sent anywhere.
-- Clearing your browser data deletes it, so use **Settings > Back up my data** now and then.
+- Clearing your browser data deletes it. Add Bunk Meter to your home screen, and take a screenshot of your numbers now and then (or use **Settings > Back up my data**).
 
 Your college's attendance records are final. Bunk Meter is a guide to help you plan.
 
